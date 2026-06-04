@@ -1,6 +1,15 @@
 """「未来鹅」Streamlit 入口：sidebar 选画像，主区域多轮对话。"""
 from __future__ import annotations
 
+# Streamlit Cloud 系统 sqlite 版本过旧，chromadb 要求 >= 3.35；用 pysqlite3 顶替。
+# 必须在任何会触发 chromadb / sqlite3 的 import 之前执行。
+try:
+    import pysqlite3  # type: ignore
+    import sys
+    sys.modules["sqlite3"] = pysqlite3
+except ImportError:
+    pass
+
 import hashlib
 import time
 

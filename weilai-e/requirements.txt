@@ -8,6 +8,8 @@ langgraph==0.2.50
 # 向量库与检索
 chromadb==0.5.20
 sentence-transformers==3.3.1
+# Streamlit Cloud 系统 sqlite 太旧，chromadb 启动会失败；仅 Linux 安装
+pysqlite3-binary==0.5.3; sys_platform == "linux"
 
 # Web 与 UI
 streamlit==1.40.2
