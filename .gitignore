@@ -1,0 +1,30 @@
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+
+# Streamlit 密钥
+**/.streamlit/secrets.toml
+
+# 数据产物（忽略目录内容，但保留占位）
+weilai-e/data/vector_store/*
+!weilai-e/data/vector_store/.gitkeep
+weilai-e/memory/store/*
+!weilai-e/memory/store/.gitkeep
+
+# 日志、临时文件
+*.log
+*.tmp
+*.swp

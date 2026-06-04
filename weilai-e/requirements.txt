@@ -1,0 +1,24 @@
+# LLM 与 Agent 编排
+langchain==0.3.7
+langchain-core==0.3.21
+langchain-community==0.3.7
+langchain-openai==0.2.9
+langgraph==0.2.50
+
+# 向量库与检索
+chromadb==0.5.20
+sentence-transformers==3.3.1
+
+# Web 与 UI
+streamlit==1.40.2
+streamlit-chat==0.1.1
+
+# 工具
+duckduckgo-search==6.3.7
+python-dotenv==1.0.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# 解析
+markdown-it-py==3.0.0
+tiktoken==0.8.0
