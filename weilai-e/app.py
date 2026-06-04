@@ -20,8 +20,11 @@ from config.prompts import AGENT_LABELS
 from config.settings import get_settings
 from core.graph import get_app
 from memory.conversation import (
+    clear_history,
     load as load_memory,
+    render_full_history,
     render_profile_prompt,
+    render_profile_view,
     save as save_memory,
     update_profile,
 )
@@ -172,17 +175,37 @@ def main() -> None:
     _render_sidebar()
 
     st.markdown("### 我是「未来鹅」🪿，求职路上的贴心学长，从大一到毕业陪你聊职业")
-    profile_block = render_profile_prompt(
-        load_memory(
-            _stable_user_id(
-                st.session_state.profile.get("grade", ""),
-                st.session_state.profile.get("major", ""),
-            )
-        )
+
+    user_id = _stable_user_id(
+        st.session_state.profile.get("grade", ""),
+        st.session_state.profile.get("major", ""),
     )
-    if profile_block:
-        with st.expander("当前画像与近期成长记录", expanded=False):
-            st.markdown(profile_block)
+    memory = load_memory(user_id)
+    profile_view = render_profile_view(memory)
+    history_view = render_full_history(memory)
+
+    if profile_view or history_view:
+        with st.expander("📒 我的画像 & 成长记录", expanded=False):
+            tab_profile, tab_history = st.tabs(
+                [
+                    "🪪 当前画像",
+                    f"📜 成长记录（{len(memory.growth)}）",
+                ]
+            )
+            with tab_profile:
+                if profile_view:
+                    st.markdown(profile_view)
+                else:
+                    st.caption("还没填画像，去左边侧边栏填一下年级和专业吧。")
+            with tab_history:
+                if history_view:
+                    st.markdown(history_view)
+                    if st.button("🗑️ 清空成长记录", key="clear_growth"):
+                        clear_history(memory)
+                        st.success("已清空，刷新看看。")
+                        st.rerun()
+                else:
+                    st.caption("还没有对话记录。聊几句之后会自动记下来。")
 
     _render_history()
 

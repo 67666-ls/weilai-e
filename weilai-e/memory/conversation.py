@@ -114,3 +114,46 @@ def render_profile_prompt(memory: ConversationMemory) -> str:
         for g in recent:
             lines.append(f"- [{g.agent}] {g.summary}")
     return "\n".join(lines) if len(lines) > 1 else ""
+
+
+def render_profile_view(memory: ConversationMemory) -> str:
+    """给主区域用的人类可读画像渲染（不进 prompt）。"""
+    p = memory.profile
+    if not any([p.grade, p.major, p.interests, p.target_roles, p.notes]):
+        return ""
+    lines = []
+    if p.grade:
+        lines.append(f"- **年级**：{p.grade}")
+    if p.major:
+        lines.append(f"- **专业 / 学校**：{p.major}")
+    if p.interests:
+        lines.append(f"- **兴趣方向**：{', '.join(p.interests)}")
+    if p.target_roles:
+        lines.append(f"- **目标岗位**：{', '.join(p.target_roles)}")
+    if p.notes:
+        lines.append(f"- **备注**：{p.notes}")
+    if memory.last_agent:
+        lines.append(f"- **上次会话由**：{memory.last_agent}")
+    return "\n".join(lines)
+
+
+def render_full_history(memory: ConversationMemory) -> str:
+    """渲染全部成长记录（按时间倒序），不进 prompt，仅给前端展示。"""
+    if not memory.growth:
+        return ""
+    from datetime import datetime
+    from config.prompts import AGENT_LABELS
+
+    lines = []
+    for g in reversed(memory.growth):
+        when = datetime.fromtimestamp(g.ts).strftime("%Y-%m-%d %H:%M")
+        agent_label = AGENT_LABELS.get(g.agent, g.agent)
+        lines.append(f"- `{when}` · **{agent_label}**：{g.summary}")
+    return "\n".join(lines)
+
+
+def clear_history(memory: ConversationMemory) -> None:
+    """清空成长记录但保留画像。"""
+    memory.growth = []
+    memory.last_agent = ""
+    save(memory)
