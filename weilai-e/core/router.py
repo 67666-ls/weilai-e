@@ -22,8 +22,8 @@ _GRADE_DEFAULT = {
     "大二": "intern",
     "大三": "intern",
     "大四": "coach",
-    "研究生": "coach",
-    "研一": "coach",
+    "研究生": "intern",  # 兼容旧档案,默认按研一处理
+    "研一": "intern",
     "研二": "coach",
     "研三": "coach",
 }
@@ -41,7 +41,7 @@ _KEYWORD_RULES = [
 # "实习"单独出现时一律视为 intern（秋招用户多半已被上面的强信号截胡）。
 _RESUME_KW = ("简历",)
 _INTERN_WEAK = ("实习",)
-_SENIOR_GRADES = {"大四", "研究生", "研一", "研二", "研三"}
+_SENIOR_GRADES = {"大四", "研究生", "研二", "研三"}
 
 
 def _last_user_text(state: ChatState) -> str:

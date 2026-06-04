@@ -27,7 +27,7 @@ from memory.conversation import (
 )
 
 
-GRADES = ["大一", "大二", "大三", "大四", "研究生"]
+GRADES = ["大一", "大二", "大三", "大四", "研一", "研二", "研三"]
 INTEREST_OPTIONS = [
     "互联网产品", "算法/AI", "前端", "后台", "客户端",
     "数据", "设计", "运营", "市场", "职能",
@@ -59,7 +59,7 @@ def _render_sidebar() -> None:
     settings = get_settings()
     with st.sidebar:
         st.title("🪿 未来鹅")
-        st.caption("你的腾讯 AI 学长，从大一到毕业全程陪伴")
+        st.caption("你的求职贴心学长，从大一到毕业全程陪伴")
 
         st.subheader("我的画像")
         profile = st.session_state.profile
@@ -167,11 +167,11 @@ def _run_turn(user_text: str) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="未来鹅 · 腾讯 AI 学长", page_icon="🪿", layout="wide")
+    st.set_page_config(page_title="未来鹅 · 求职贴心学长", page_icon="🪿", layout="wide")
     _init_state()
     _render_sidebar()
 
-    st.markdown("### 我是「未来鹅」🪿，从大一到毕业陪你聊聊职业这件事")
+    st.markdown("### 我是「未来鹅」🪿，求职路上的贴心学长，从大一到毕业陪你聊职业")
     profile_block = render_profile_prompt(
         load_memory(
             _stable_user_id(
@@ -186,7 +186,7 @@ def main() -> None:
 
     _render_history()
 
-    user_text = st.chat_input("说点什么吧，比如：大三想找产品实习，该怎么准备？")
+    user_text = st.chat_input("说点什么吧，比如：大三想找产品实习，可以投哪些公司？")
     if user_text:
         _run_turn(user_text.strip())
 

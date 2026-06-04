@@ -163,10 +163,10 @@ def render_context(results: list[dict]) -> str:
     """把检索结果渲染成可拼到 prompt 的引用块。"""
     if not results:
         return ""
-    lines = ["# 鹅厂知识库检索结果"]
+    lines = ["# 校招知识库检索结果"]
     for r in results:
         source = r.get("source", "")
-        lines.append(f"\n[鹅厂校招 · {source}]\n{r['text']}")
+        lines.append(f"\n[校招资料 · {source}]\n{r['text']}")
     return "\n".join(lines)
 
 

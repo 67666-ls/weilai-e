@@ -28,3 +28,4 @@ weilai-e/memory/store/*
 *.log
 *.tmp
 *.swp
+.tmp_shots/
