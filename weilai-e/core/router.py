@@ -1,9 +1,10 @@
-"""路由 Agent：根据画像 + 最新一句话决定 explorer/intern/coach/mock。
+"""路由 Agent：根据画像 + 最新一句话决定 interviewer/explorer/intern/coach/mock。
 
 策略：
-1. 用户消息显式触发关键词时直接命中（mock/coach/intern 优先级高于年级默认值）；
-2. 没显式信号时，按年级落到默认 Agent；
-3. LLM 兜底（仅在配置了 Key 且依赖可用时启用），返回 JSON。
+1. 用户消息显式触发关键词时直接命中（interviewer/mock/coach/intern 优先级高于年级默认值）；
+2. 首次进入（memory 里既无经历卡又未完成访谈）→ interviewer 主动开访谈；
+3. 没显式信号时，按年级落到默认 Agent；
+4. LLM 兜底（仅在配置了 Key 且依赖可用时启用），返回 JSON。
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from config.prompts import ROUTER_PROMPT
 from core.llm import StubLLM, make_llm
 from core.state import ChatState
+from memory.conversation import load as load_memory
 
 
 _GRADE_DEFAULT = {
@@ -31,6 +33,7 @@ _GRADE_DEFAULT = {
 
 _KEYWORD_RULES = [
     # 强信号:任何年级都直接命中
+    ("interviewer", ("帮我做画像", "盘一下我自己", "采访我", "认识我", "聊聊我自己")),
     ("mock", ("模拟面试", "面试陪练", "面我", "出题", "压力面", "群面")),
     ("coach", ("秋招", "春招", "offer", "时间线", "笔试")),
     ("intern", ("作品集", "暑期", "日常实习", "内推")),
@@ -64,9 +67,29 @@ def _rule_based(state: ChatState) -> str | None:
         return "coach" if grade in _SENIOR_GRADES else "intern"
     if any(kw in text for kw in _INTERN_WEAK):
         return "intern"
+    # 首次进入:没经历卡 + 没结束过访谈 → 主动开反向访谈
+    if _is_first_time(state):
+        return "interviewer"
     if grade in _GRADE_DEFAULT:
         return _GRADE_DEFAULT[grade]
     return None
+
+
+def _is_first_time(state: ChatState) -> bool:
+    """判断是否第一次进来:既无经历卡也未完成过访谈。
+
+    读 memory 而非 state——state 里只有当前轮次的临时字段,持久化标记在 memory 里。
+    """
+    user_id = state.get("user_id") or "anonymous"
+    try:
+        memory = load_memory(user_id)
+    except Exception:
+        return False
+    if memory.interview_done:
+        return False
+    if memory.experiences:
+        return False
+    return True
 
 
 def _llm_route(state: ChatState) -> str:
@@ -90,7 +113,7 @@ def _llm_route(state: ChatState) -> str:
         if match:
             data = json.loads(match.group(0))
             agent = str(data.get("agent", "")).strip()
-            if agent in {"explorer", "intern", "coach", "mock"}:
+            if agent in {"interviewer", "explorer", "intern", "coach", "mock"}:
                 return agent
     except Exception:
         pass

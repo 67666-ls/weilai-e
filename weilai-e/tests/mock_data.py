@@ -76,9 +76,9 @@ CASES: list[dict] = [
     {
         "id": "C01",
         "profile": PROFILES["freshman"],
-        "user_text": "学长，我才大一，对互联网行业完全没概念，听说有产品研发设计运营，到底都是干嘛的？我适合哪个方向？",
+        "user_text": "学长,我才大一,有点迷茫,听说有产品研发设计运营,到底都是干嘛的?",
         "expect_agent": "explorer",
-        "note": "大一 + 行业认知开放问题",
+        "note": "大一 + 迷茫关键词命中 explorer (避开首次访谈分支)",
     },
     {
         "id": "C02",
@@ -143,12 +143,19 @@ CASES: list[dict] = [
         "note": "出题关键词 → mock",
     },
 
-    # ---- 边界 / 默认路由 ----
+    # ---- interviewer (反向访谈:首次进入 + 主动喊话) ----
     {
         "id": "C10",
         "profile": {"grade": "", "major": "", "interests": [], "target_roles": [], "notes": ""},
         "user_text": "你好,这是什么产品?",
-        "expect_agent": "explorer",
-        "note": "空画像兜底 → explorer",
+        "expect_agent": "interviewer",
+        "note": "空画像 + 无任何 memory → 首次进入,主动开反向访谈",
+    },
+    {
+        "id": "C11",
+        "profile": PROFILES["junior"],
+        "user_text": "学长先盘一下我自己吧,采访我一下",
+        "expect_agent": "interviewer",
+        "note": "interviewer 关键词显式命中,跳过年级默认值",
     },
 ]
