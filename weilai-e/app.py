@@ -277,12 +277,17 @@ def _run_turn(user_text: str) -> None:
             placeholder.warning("未拿到回复，请重试。")
             return
 
+        ai_content = (last_ai.content or "").strip()
+        if not ai_content:
+            ai_content = "_(模型本轮没有返回内容，可能 LLM Key 失效或被请求方限流，请重试)_"
+            last_ai = AIMessage(content=ai_content)
+
         elapsed = time.time() - t0
         header = (
             f"**{AGENT_LABELS.get(agent, agent)}**"
             f" · 用时 {elapsed:.1f}s"
         )
-        placeholder.markdown(f"{header}\n\n{last_ai.content}")
+        placeholder.markdown(f"{header}\n\n{ai_content}")
         st.session_state.chat_history.append(last_ai)
 
 

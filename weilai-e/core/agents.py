@@ -140,6 +140,9 @@ def _persist(state: ChatState, agent_key: str, ai_text: str, user_text: str) -> 
     save(memory)
 
     cleaned = _strip_card(ai_text)
+    # 兜底:LLM 把整段塞进 <card>,清洗后空了 → 回退到原文,而不是给前端空字符串
+    if not cleaned.strip() and ai_text.strip():
+        cleaned = ai_text.strip()
     return cleaned, extra
 
 
@@ -148,8 +151,13 @@ def _make_node(agent_key: str, tool_fn: Callable[[ChatState], str]):
         tool_ctx = tool_fn(state)
         messages = _build_messages(state, agent_key, tool_ctx)
         llm = make_llm()
-        resp = llm.invoke(messages)
-        text = getattr(resp, "content", "") or ""
+        try:
+            resp = llm.invoke(messages)
+            text = getattr(resp, "content", "") or ""
+        except Exception as exc:
+            text = f"_(LLM 调用失败:{type(exc).__name__}:{exc})_"
+        if not text.strip():
+            text = "_(模型本轮没有返回任何内容,请重试或检查 API 配置)_"
         cleaned, extra = _persist(state, agent_key, text, _last_user_text(state.get("messages", [])))
         out: dict = {"messages": [AIMessage(content=cleaned)], "agent": agent_key, "tools_output": tool_ctx}
         out.update(extra)
