@@ -57,24 +57,65 @@ def _build_messages(state: ChatState, agent_key: str, tool_ctx: str) -> list[Bas
 
 # ---------- <card> 解析与入库 ----------
 
-_CARD_RE = re.compile(r"<card>\s*(\{.*?\})\s*</card>", re.DOTALL)
+_CARD_BLOCK_RE = re.compile(r"<card>(.*?)</card>", re.DOTALL)
 
 
 def _strip_card(text: str) -> str:
-    """从 AI 文本里去掉 <card>...</card> 给前端展示。"""
-    return _CARD_RE.sub("", text or "").strip()
+    """从 AI 文本里去掉所有 <card>...</card> 给前端展示。"""
+    return _CARD_BLOCK_RE.sub("", text or "").strip()
 
 
-def _extract_card(text: str) -> dict[str, Any] | None:
+def _balanced_json(segment: str) -> str | None:
+    """在 segment 里找出第一个括号配对的 JSON 对象,支持嵌套 dict/list。
+
+    比 r"\\{.*?\\}" 安全:能正确处理 experience 是 dict、tags 是 list 等情形,
+    并且会跳过字符串字面量里出现的 { } 字符。
+    """
+    if not segment:
+        return None
+    start = segment.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_str = False
+    escape = False
+    for i in range(start, len(segment)):
+        ch = segment[i]
+        if in_str:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return segment[start : i + 1]
+    return None
+
+
+def _extract_cards(text: str) -> list[dict[str, Any]]:
+    """提取所有 <card> 块里的 JSON,解析失败的块跳过。"""
     if not text:
-        return None
-    match = _CARD_RE.search(text)
-    if not match:
-        return None
-    try:
-        return json.loads(match.group(1))
-    except Exception:
-        return None
+        return []
+    cards: list[dict[str, Any]] = []
+    for match in _CARD_BLOCK_RE.finditer(text):
+        raw = _balanced_json(match.group(1))
+        if not raw:
+            continue
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            continue
+        if isinstance(obj, dict):
+            cards.append(obj)
+    return cards
 
 
 def _ingest_card(memory: Any, card: dict[str, Any], raw_user_text: str) -> bool:
@@ -125,13 +166,15 @@ def _persist(state: ChatState, agent_key: str, ai_text: str, user_text: str) -> 
     memory = load(user_id)
     update_profile(memory, **(state.get("profile") or {}))
 
-    card = _extract_card(ai_text) if agent_key == "interviewer" else None
+    cards = _extract_cards(ai_text) if agent_key == "interviewer" else []
     extra: dict = {}
-    if card:
-        done = _ingest_card(memory, card, user_text)
-        if done:
-            memory.interview_done = True
-            extra["interview_done"] = True
+    interview_done = False
+    for card in cards:
+        if _ingest_card(memory, card, user_text):
+            interview_done = True
+    if interview_done:
+        memory.interview_done = True
+        extra["interview_done"] = True
 
     summary = (user_text or "").strip()[:120]
     if summary:

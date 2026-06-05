@@ -150,23 +150,44 @@ def _render_action_board(memory: ConversationMemory) -> None:
                 st.rerun()
 
 
-# 雷达图维度，与 INTERVIEWER_PROMPT 抽取的能力名对齐
+# 雷达图维度,与 INTERVIEWER_PROMPT 抽取的能力名对齐
 _RADAR_DIMS = ["项目推动", "数据分析", "沟通表达", "技术深度", "行业认知", "抗压"]
 
-# 目标岗位的"要求雷达"内置一份兜底，后续可由 router/intern agent 写入 memory
-_ROLE_REQUIREMENTS = {
-    "产品": [4, 4, 5, 2, 5, 4],
-    "后端": [4, 3, 3, 5, 3, 4],
-    "前端": [4, 2, 3, 4, 3, 3],
-    "算法": [3, 5, 3, 5, 4, 4],
-    "数据": [3, 5, 4, 4, 4, 3],
-    "运营": [4, 4, 5, 1, 5, 4],
-    "设计": [3, 2, 4, 3, 4, 3],
-}
+
+@st.cache_data(show_spinner=False)
+def _load_role_requirements() -> list[dict]:
+    """从 data/role_requirements.json 加载岗位要求向量,失败时回到内置兜底。"""
+    import json
+    from pathlib import Path
+
+    fallback = [
+        {"keywords": ["产品"], "vector": [4, 4, 5, 2, 5, 4]},
+        {"keywords": ["后端", "后台"], "vector": [4, 3, 3, 5, 3, 4]},
+        {"keywords": ["前端"], "vector": [4, 2, 3, 4, 3, 3]},
+        {"keywords": ["算法"], "vector": [3, 5, 3, 5, 4, 4]},
+        {"keywords": ["数据"], "vector": [3, 5, 4, 4, 4, 3]},
+        {"keywords": ["运营"], "vector": [4, 4, 5, 1, 5, 4]},
+        {"keywords": ["设计"], "vector": [3, 2, 4, 3, 4, 3]},
+    ]
+    path = Path(__file__).resolve().parent / "data" / "role_requirements.json"
+    if not path.exists():
+        return fallback
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        roles = data.get("roles") or []
+        cleaned: list[dict] = []
+        for r in roles:
+            kw = r.get("keywords") or []
+            vec = r.get("vector") or []
+            if kw and len(vec) == len(_RADAR_DIMS):
+                cleaned.append({"keywords": list(kw), "vector": [int(v) for v in vec]})
+        return cleaned or fallback
+    except Exception:
+        return fallback
 
 
 def _student_skill_vector(memory: ConversationMemory) -> list[int]:
-    """memory.skills 拍平到 6 维。命中名取分；没命中给 0（保留'空雷达'的真实感）。"""
+    """memory.skills 拍平到 6 维。命中名取分;没命中给 0(保留'空雷达'的真实感)。"""
     by_name = {s.name: s.score for s in memory.skills}
     return [int(by_name.get(d, 0)) for d in _RADAR_DIMS]
 
@@ -174,10 +195,12 @@ def _student_skill_vector(memory: ConversationMemory) -> list[int]:
 def _match_role_vector(target_roles: list[str]) -> tuple[str, list[int]] | None:
     if not target_roles:
         return None
+    requirements = _load_role_requirements()
     for role in target_roles:
-        for key, vec in _ROLE_REQUIREMENTS.items():
-            if key in role:
-                return role, vec
+        for entry in requirements:
+            for kw in entry["keywords"]:
+                if kw and kw in role:
+                    return role, entry["vector"]
     return None
 
 
